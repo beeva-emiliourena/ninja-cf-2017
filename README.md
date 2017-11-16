@@ -1,7 +1,7 @@
 Cloudformation workshop
 =======================
 
-This repo contains some cloudformation templates to be used in a workshop. They are not ment to be used as they are because they are made with the intend of showing as many different ways to do things as possible. It can be used as referende thought.
+This repo contains some cloudformation templates to be used in a workshop. They are not ment to be used as they are because they are made with the intend of showing as many different ways to do things as possible. It can be used as referende though.
 
 To run this we need awscli and an AWS account where we had enough permissions to run:
 
