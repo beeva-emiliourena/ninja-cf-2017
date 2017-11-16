@@ -1,0 +1,24 @@
+  <%= alarmTypes[i] %>:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+        - ''
+        - - https://s3.amazonaws.com/
+          - Fn::FindInMap:
+            - EnvironmentParams
+            - Ref: Environment
+            - ConfigBucketName
+          - "/cloudformation/templates/alarms/custom-metrics-alarms.json"
+      TimeoutInMinutes: '10'
+      Parameters:
+        Owner:
+          Ref: Owner
+        Project:
+          Ref: Project
+        Environment:
+          Ref: Environment
+        DeleteAfter:
+          Ref: DeleteAfter
+        CustomAlarmName: <%= alarmTypes[i] %>_xml_validation_error
+        AlarmEventType: <%= alarmTypes[i] %>

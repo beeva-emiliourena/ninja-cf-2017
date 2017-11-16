@@ -1,0 +1,66 @@
+[
+  {
+    "ParameterKey": "Owner",
+    "ParameterValue": "emilio.urena@beeva.com"
+  },
+  {
+    "ParameterKey": "Project",
+    "ParameterValue": "projectfoo"
+  },
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "DeleteAfter",
+    "ParameterValue": "Never"
+  },
+  {
+    "ParameterKey": "VPCSubnetCidrBlock",
+    "ParameterValue": "10.10.10.0/23"
+  },
+  {
+    "ParameterKey": "AvailabilityZone1",
+    "ParameterValue": "b"
+  },
+  {
+    "ParameterKey": "AvailabilityZone2",
+    "ParameterValue": "a"
+  },
+  {
+    "ParameterKey": "AvailabilityZone3",
+    "ParameterValue": "c"
+  },
+  {
+    "ParameterKey": "PublicSubnetCidrBlock1",
+    "ParameterValue": "10.10.10.0/26"
+  },
+  {
+    "ParameterKey": "PublicSubnetCidrBlock2",
+    "ParameterValue": "10.10.10.64/26"
+  },
+  {
+    "ParameterKey": "PublicSubnetCidrBlock3",
+    "ParameterValue": "10.10.10.128/26"
+  },
+  {
+    "ParameterKey": "PrivateSubnetCidrBlock1",
+    "ParameterValue": "10.10.11.0/26"
+  },
+  {
+    "ParameterKey": "PrivateSubnetCidrBlock2",
+    "ParameterValue": "10.10.11.64/26"
+  },
+  {
+    "ParameterKey": "PrivateSubnetCidrBlock3",
+    "ParameterValue": "10.10.11.128/26"
+  },
+  {
+    "ParameterKey": "RemoteAccessNetwork",
+    "ParameterValue": "62.14.46.178/32"
+  },
+  {
+    "ParameterKey": "SetupNatGateway",
+    "ParameterValue": "true"
+  }
+]

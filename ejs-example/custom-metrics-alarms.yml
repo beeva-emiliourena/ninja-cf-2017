@@ -1,0 +1,64 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Custom alarms for custom metrics
+Parameters:
+  Owner:
+    Description: Enter Team or Individual Name Responsible for the Stack.
+    Type: String
+    Default: FirstName LastName
+  Project:
+    Description: Enter Project Name.
+    Type: String
+    Default: Infrastructure Stack Creation
+  Environment:
+    Description: Select Environment to run the stack
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - qa
+    - pre
+    - pro
+    ConstraintDescription: Must be one of dev, qa, pre, pro.
+  Version:
+    Description: Project Version
+    Type: String
+    Default: 1.0.0
+  DeleteAfter:
+    Description: Enter Date (MM/DD/YYYY). It's Ok to Delete the Stack or 'Never' if
+      meant to be persistent.
+    Type: String
+    Default: 00/00/201x
+  CustomAlarmName:
+    Description: Custom alarm name
+    Type: String
+    Default: CustomName
+  AlarmEventType:
+    Description: Alarm event type
+    Type: String
+    Default: generic
+Resources:
+  CustomMetricAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Custom alarm
+      AlarmName:
+        Ref: CustomAlarmName
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+      - Name: EventType
+        Value:
+          Ref: AlarmEventType
+      EvaluationPeriods: 1
+      MetricName: xsd_schema_validation_error
+      Namespace: foobarspace
+      Period: 86400
+      Statistic: SampleCount
+      Threshold: 0
+      TreatMissingData: notBreaching
+Outputs:
+  AlarmName:
+    Value:
+      Ref: CustomAlarmName
+    Description: The alarm name
+

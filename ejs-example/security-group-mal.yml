@@ -1,0 +1,83 @@
+BastionSecurityGroup:
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: SSH Access to Foo Instance
+    VpcId:
+      Ref: VPC
+    Tags:
+    - Key: Name
+      Value:
+        Fn::Join:
+        - "."
+        - - "bastion"
+          - Ref: Project
+          - Ref: Environment
+    - Key: owner
+      Value:
+        Ref: Owner
+    - Key: project
+      Value:
+        Ref: Project
+    - Key: sponsor
+      Value:
+        Ref: Sponsor
+    - Key: environment
+      Value:
+        Ref: Environment
+    - Key: deleteAfter
+      Value:
+        Ref: DeleteAfter
+    SecurityGroupIngress:
+    - IpProtocol: tcp
+      FromPort: '22'
+      ToPort: '22'
+      CidrIp:
+        Ref: NetworkAccessIP
+    - IpProtocol: tcp
+      FromPort: '80'
+      ToPort: '80'
+      CidrIp:
+        Ref: NetworkAccessIP
+    - IpProtocol: tcp
+      FromPort: '443'
+      ToPort: '443'
+      CidrIp:
+        Ref: NetworkAccessIP
+    - IpProtocol: tcp
+      FromPort: '9200'
+      ToPort: '9200'
+      CidrIp:
+        Ref: NetworkAccessIP
+    - IpProtocol: tcp
+      FromPort: '5432'
+      ToPort: '5432'
+      CidrIp:
+        Ref: NetworkAccessIP
+    - IpProtocol: tcp
+      FromPort: '5439'
+      ToPort: '5439'
+      CidrIp:
+        Ref: NetworkAccessIP
+    - IpProtocol: tcp
+      FromPort: '4440'
+      ToPort: '4440'
+      CidrIp:
+        Ref: NetworkAccessIP
+    - IpProtocol: tcp
+      FromPort: '4443'
+      ToPort: '4443'
+      CidrIp:
+        Ref: NetworkAccessIP
+    - IpProtocol: tcp
+      FromPort: '9190'
+      ToPort: '9190'
+      CidrIp:
+        Ref: NetworkAccessIP
+    - IpProtocol: icmp
+      FromPort: "-1"
+      ToPort: "-1"
+      CidrIp:
+        Ref: NetworkAccessIP
+    SecurityGroupEgress:
+    - IpProtocol: "-1"
+      CidrIp: 0.0.0.0/0

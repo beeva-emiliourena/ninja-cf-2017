@@ -1,0 +1,46 @@
+[
+  {
+    "ParameterKey": "Owner",
+    "ParameterValue": "emilio.urena@beeva.com"
+  },
+  {
+    "ParameterKey": "Project",
+    "ParameterValue": "projectfoo"
+  },
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "DeleteAfter",
+    "ParameterValue": "Never"
+  },
+  {
+    "ParameterKey": "NetworkAccessIPs",
+    "ParameterValue": "62.14.46.178/32, 213.27.146.180/32, 0.0.0.0/0"
+  },
+  {
+    "ParameterKey": "Ec2KeyPair",
+    "ParameterValue": "projectfoo-dev"
+  },
+  {
+    "ParameterKey": "EC2InstanceType",
+    "ParameterValue": "t2.micro"
+  },
+  {
+    "ParameterKey": "BastionInstanceType",
+    "ParameterValue": "t2.micro"
+  },
+  {
+    "ParameterKey": "SetupEC2Instance",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "SetupBastionInstance",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LogsRetentionInDays",
+    "ParameterValue": "14"
+  }
+]

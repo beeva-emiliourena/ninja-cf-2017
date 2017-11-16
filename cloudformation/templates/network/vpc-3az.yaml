@@ -1,0 +1,884 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 101 VPC
+Parameters:
+  # Common information for all resources.
+  Owner:
+    Description: Enter team or individual name responsible for the stack.
+    Type: String
+    Default: FirstName LastName
+  Project:
+    Description: Enter project name.
+    Type: String
+    Default: Project
+  Environment:
+    Description: Select environment to run the stack
+    Type: String
+    Default: pilot
+    AllowedValues:
+    - pilot
+    - dev
+    - qa
+    - pre
+    - pro
+    ConstraintDescription: Must be one of pilot, dev, qa, pre, pro.
+  DeleteAfter:
+    Description: Enter Date (MM/DD/YYYY). It's Ok to delete the stack or 'Never' if
+      meant to be persistent.
+    Type: String
+    Default: Never
+  # VPC configuration.
+  VPCSubnetCidrBlock:
+    Description: Enter VPC CIDR Block. (i.e. 10.0.0.0/16 = 10.0.0.0-10.0.255.255 =
+      256 Subnets - 65534 hosts)
+    Type: String
+    Default: 10.0.0.0/16
+    MinLength: '10'
+    MaxLength: '18'
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+  AvailabilityZone1:
+    Description: Enter Availability Zone 1 for Public and Private Subnets to use.
+    Type: String
+    Default: a
+    AllowedValues:
+    - a
+    - b
+    - c
+    - d
+    - e
+    - f
+  AvailabilityZone2:
+    Description: Enter Availability Zone 1 for Public and Private Subnets to use.
+    Type: String
+    Default: b
+    AllowedValues:
+    - a
+    - b
+    - c
+    - d
+    - e
+    - f
+  AvailabilityZone3:
+    Description: Enter Availability Zone 1 for Public and Private Subnets to use.
+    Type: String
+    Default: c
+    AllowedValues:
+    - a
+    - b
+    - c
+    - d
+    - e
+    - f
+  PublicSubnetCidrBlock1:
+    Description: Enter Public Subnet 1 CIDR Block.
+    Type: String
+    Default: 10.0.1.0/24
+    MinLength: '10'
+    MaxLength: '18'
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+  PublicSubnetCidrBlock2:
+    Description: Enter Public Subnet 2 CIDR Block.
+    Type: String
+    Default: 10.0.2.0/24
+    MinLength: '10'
+    MaxLength: '18'
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+  PublicSubnetCidrBlock3:
+    Description: Enter Public Subnet 3 CIDR Block.
+    Type: String
+    Default: 10.0.3.0/24
+    MinLength: '10'
+    MaxLength: '18'
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+  PrivateSubnetCidrBlock1:
+    Description: Enter Private Subnet 1 CIDR Block.
+    Type: String
+    Default: 10.0.4.0/24
+    MinLength: '10'
+    MaxLength: '18'
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+  PrivateSubnetCidrBlock2:
+    Description: Enter Private Subnet 2 CIDR Block.
+    Type: String
+    Default: 10.0.5.0/24
+    MinLength: '10'
+    MaxLength: '18'
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+  PrivateSubnetCidrBlock3:
+    Description: Enter Private Subnet 3 CIDR Block.
+    Type: String
+    Default: 10.0.6.0/24
+    MinLength: '10'
+    MaxLength: '18'
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+  RemoteAccessNetwork:
+    Description: Source Network IP CIDR Block such as an Office that can access instances
+      say over VPN. (i.e. 192.168.100.0/24)
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 192.168.100.0/24
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid CIDR range of the form x.x.x.x/x.
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:
+        Ref: VPCSubnetCidrBlock
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - vpc
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - ig
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  GatewayToInternet:
+    Type: AWS::EC2::VPCGatewayAttachment
+    DependsOn:
+    - InternetGateway
+    - VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: InternetGateway
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      AvailabilityZone:
+        Fn::Join:
+        - ''
+        - - Ref: AWS::Region
+          - Ref: AvailabilityZone1
+      CidrBlock:
+        Ref: PublicSubnetCidrBlock1
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - public-subnet-1
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      AvailabilityZone:
+        Fn::Join:
+        - ''
+        - - Ref: AWS::Region
+          - Ref: AvailabilityZone2
+      CidrBlock:
+        Ref: PublicSubnetCidrBlock2
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - public-subnet-2
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      AvailabilityZone:
+        Fn::Join:
+        - ''
+        - - Ref: AWS::Region
+          - Ref: AvailabilityZone3
+      CidrBlock:
+        Ref: PublicSubnetCidrBlock3
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - public-subnet-3
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - public-route
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn:
+    - PublicRouteTable
+    - InternetGateway
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+  PublicSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn:
+    - PublicSubnet1
+    - PublicRouteTable
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet1
+      RouteTableId:
+        Ref: PublicRouteTable
+  PublicSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn:
+    - PublicSubnet2
+    - PublicRouteTable
+    - GatewayToInternet
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet2
+      RouteTableId:
+        Ref: PublicRouteTable
+  PublicSubnetRouteTableAssociation3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn:
+    - PublicSubnet3
+    - PublicRouteTable
+    - GatewayToInternet
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet3
+      RouteTableId:
+        Ref: PublicRouteTable
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      AvailabilityZone:
+        Fn::Join:
+        - ''
+        - - Ref: AWS::Region
+          - Ref: AvailabilityZone1
+      CidrBlock:
+        Ref: PrivateSubnetCidrBlock1
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - private-subnet-1
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      AvailabilityZone:
+        Fn::Join:
+        - ''
+        - - Ref: AWS::Region
+          - Ref: AvailabilityZone2
+      CidrBlock:
+        Ref: PrivateSubnetCidrBlock2
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - private-subnet-2
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      AvailabilityZone:
+        Fn::Join:
+        - ''
+        - - Ref: AWS::Region
+          - Ref: AvailabilityZone3
+      CidrBlock:
+        Ref: PrivateSubnetCidrBlock3
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - private-subnet-3
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - private-route
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PrivateSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn:
+    - PrivateSubnet1
+    - PrivateRouteTable
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet1
+      RouteTableId:
+        Ref: PrivateRouteTable
+  PrivateSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn:
+    - PrivateSubnet2
+    - PrivateRouteTable
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet2
+      RouteTableId:
+        Ref: PrivateRouteTable
+  PrivateSubnetRouteTableAssociation3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn:
+    - PrivateSubnet3
+    - PrivateRouteTable
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet3
+      RouteTableId:
+        Ref: PrivateRouteTable
+  S3VpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    DependsOn:
+    - VPC
+    - PrivateRouteTable
+    - PublicRouteTable
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action: "*"
+          Effect: Allow
+          Resource: "*"
+          Principal: "*"
+      RouteTableIds:
+      - Ref: PrivateRouteTable
+      - Ref: PublicRouteTable
+      ServiceName:
+        Fn::Join:
+        - ''
+        - - com.amazonaws.
+          - Ref: AWS::Region
+          - ".s3"
+      VpcId:
+        Ref: VPC
+  PublicNetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - public-acl
+            - Ref: Environment
+            - Ref: Project
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PrivateNetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    DependsOn: VPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - private-acl
+            - Ref: Environment
+            - Ref: Project
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  PublicNetworkAclEntryInboundAllowAll:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: PublicNetworkAcl
+      RuleNumber: '100'
+      Protocol: "-1"
+      RuleAction: allow
+      Egress: 'false'
+      CidrBlock: 0.0.0.0/0
+      Icmp:
+        Code: "-1"
+        Type: "-1"
+      PortRange:
+        From: '0'
+        To: '0'
+  PrivateNetworkAclEntryInboundAllowAll:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
+      RuleNumber: '100'
+      Protocol: "-1"
+      RuleAction: allow
+      Egress: 'false'
+      CidrBlock: 0.0.0.0/0
+      Icmp:
+        Code: "-1"
+        Type: "-1"
+      PortRange:
+        From: '0'
+        To: '0'
+  PublicNetworkAclEntryOutoundAllowAll:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: PublicNetworkAcl
+      RuleNumber: '100'
+      Protocol: "-1"
+      RuleAction: allow
+      Egress: 'true'
+      CidrBlock: 0.0.0.0/0
+      Icmp:
+        Code: "-1"
+        Type: "-1"
+      PortRange:
+        From: '0'
+        To: '0'
+  PrivateNetworkAclEntryOutboundAllowAll:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
+      RuleNumber: '100'
+      Protocol: "-1"
+      RuleAction: allow
+      Egress: 'true'
+      CidrBlock: 0.0.0.0/0
+      Icmp:
+        Code: "-1"
+        Type: "-1"
+      PortRange:
+        From: '0'
+        To: '0'
+  InternalAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: VPC
+    Properties:
+      GroupDescription: Instance to Instance Access in VPC
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - "instance2instance"
+            - Ref: Environment
+            - Ref: Project
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+  InternalAccessSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: InternalAccessSecurityGroup
+    Properties:
+      GroupId:
+        Ref: InternalAccessSecurityGroup
+      IpProtocol: "-1"
+      SourceSecurityGroupId:
+        Ref: InternalAccessSecurityGroup
+  RemoteAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Instance Access over VPN/Direct Connect
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - "remote"
+            - Ref: Environment
+            - Ref: Project
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+      SecurityGroupIngress:
+      - IpProtocol: "-1"
+        CidrIp:
+          Ref: RemoteAccessNetwork
+      SecurityGroupEgress:
+      - IpProtocol: "-1"
+        CidrIp: 0.0.0.0/0
+  PublicSubnet1PublicACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet1
+      NetworkAclId:
+        Ref: PublicNetworkAcl
+  PublicSubnet2PublicACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet2
+      NetworkAclId:
+        Ref: PublicNetworkAcl
+  PublicSubnet3PublicACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet3
+      NetworkAclId:
+        Ref: PublicNetworkAcl
+  PrivateSubnet1PrivateACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet1
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
+  PrivateSubnet2PrivateACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet2
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
+  PrivateSubnet3PrivateACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet3
+      NetworkAclId:
+        Ref: PrivateNetworkAcl
+Outputs:
+  # Common information for all resources.
+  Owner:
+    Description: Responsible of the stack creation.
+    Value:
+      Ref: Owner
+  Project:
+    Description: Project name.
+    Value:
+      Ref: Project
+  Environment:
+    Description: Environment stage.
+    Value:
+      Ref: Environment
+  DeleteAfter:
+    Description: Date when the resource will automatically deleted.
+    Value:
+      Ref: DeleteAfter
+  # VPC configuration.
+  VPC:
+    Description: Created VPC
+    Value:
+      Ref: VPC
+  VPCCIDR:
+    Description: VPC Subnet CIDR Block
+    Value:
+      Ref: VPCSubnetCidrBlock
+  VPCe:
+    Description: Created VPC Endpoint
+    Value:
+      Ref: S3VpcEndpoint
+  PublicRouteTable:
+    Description: Public Route Table Created for VPC
+    Value:
+      Ref: PublicRouteTable
+  PrivateRouteTable:
+    Description: Private Route Table Created for VPC
+    Value:
+      Ref: PrivateRouteTable
+  PublicNetworkAcl:
+    Description: Public Network ACL Created for VPC
+    Value:
+      Ref: PublicNetworkAcl
+  PrivateNetworkAcl:
+    Description: Private Netowrk ACL Created for VPC
+    Value:
+      Ref: PrivateNetworkAcl
+  PublicSubnet1:
+    Description: Public Subnet 1 Created for VPC
+    Value:
+      Ref: PublicSubnet1
+  PublicSubnet2:
+    Description: Public Subnet 2 Created for VPC
+    Value:
+      Ref: PublicSubnet2
+  PublicSubnet3:
+    Description: Public Subnet 3 Created for VPC
+    Value:
+      Ref: PublicSubnet3
+  PrivateSubnet1:
+    Description: Private Subnet 1 Created for VPC
+    Value:
+      Ref: PrivateSubnet1
+  PrivateSubnet2:
+    Description: Private Subnet 1 Created for VPC
+    Value:
+      Ref: PrivateSubnet2
+  PrivateSubnet3:
+    Description: Private Subnet 1 Created for VPC
+    Value:
+      Ref: PrivateSubnet3
+  AvailabilityZone1:
+    Description: Private Subnet IDs Created for VPC
+    Value:
+      Fn::GetAtt:
+      - PublicSubnet1
+      - AvailabilityZone
+  AvailabilityZone2:
+    Description: Private Subnet IDs Created for VPC
+    Value:
+      Fn::GetAtt:
+      - PublicSubnet2
+      - AvailabilityZone
+  AvailabilityZone3:
+    Description: Private Subnet IDs Created for VPC
+    Value:
+      Fn::GetAtt:
+      - PublicSubnet3
+      - AvailabilityZone
+  PublicSubnetCidr1:
+    Description: Public Subnet IDs Created for VPC
+    Value:
+      Ref: PublicSubnetCidrBlock1
+  PublicSubnetCidr2:
+    Description: Public Subnet IDs Created for VPC
+    Value:
+      Ref: PublicSubnetCidrBlock2
+  PublicSubnetCidr3:
+    Description: Public Subnet IDs Created for VPC
+    Value:
+      Ref: PublicSubnetCidrBlock3
+  PrivateSubnetCidr1:
+    Description: Private Subnet IDs Created for VPC
+    Value:
+      Ref: PrivateSubnetCidrBlock1
+  PrivateSubnetCidr2:
+    Description: Private Subnet IDs Created for VPC
+    Value:
+      Ref: PrivateSubnetCidrBlock2
+  PrivateSubnetCidr3:
+    Description: Private Subnet IDs Created for VPC
+    Value:
+      Ref: PrivateSubnetCidrBlock3
+  InternetGateway:
+    Description: Internet Gateway Created for VPC
+    Value:
+      Ref: InternetGateway
+  InternalAccessSecurityGroup:
+    Description: Instance to Instance Access within VPC
+    Value:
+      Ref: InternalAccessSecurityGroup
+  RemoteAccessSecurityGroup:
+    Description: Remote Network or IP that can Access the instances of VPN or Direct
+      Connect.
+    Value:
+      Ref: RemoteAccessSecurityGroup

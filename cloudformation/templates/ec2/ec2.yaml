@@ -1,0 +1,553 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 202 EC2 example instance on an autoscaling group
+Parameters:
+  # Common information for all resources.
+  Owner:
+    Description: Enter team or individual email responsible for the stack.
+    Type: String
+    Default: FirstName LastName
+  Project:
+    Description: Enter project name.
+    Type: String
+    Default: Project
+  Environment:
+    Description: Select environment to run the stack
+    Type: String
+    Default: pilot
+    AllowedValues:
+    - pilot
+    - dev
+    - qa
+    - pre
+    - pro
+    ConstraintDescription: Must be one of pilot, dev, qa, pre, pro.
+  DeleteAfter:
+    Description: Enter Date (MM/DD/YYYY). It's Ok to delete the stack or 'Never' if
+      meant to be persistent.
+    Type: String
+    Default: Never
+  # Instance configuration.
+  InstanceRole:
+    Description: Select role for the instance.
+    Type: String
+    Default: instance
+  Ec2KeyPair:
+    Description: Select Keypair to Assign to EC2 Instances
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceType:
+    Description: Select Instance Type.
+    Type: String
+    Default: t2.small
+    AllowedValues:
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m1.xlarge
+    - m2.xlarge
+    - m2.2xlarge
+    - m2.4xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - c1.medium
+    - c1.xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - g2.2xlarge
+    - g2.8xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - d2.xlarge
+    - d2.2xlarge
+    - d2.4xlarge
+    - d2.8xlarge
+    - hi1.4xlarge
+    - hs1.8xlarge
+    - cr1.8xlarge
+    - cc2.8xlarge
+    - cg1.4xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+  LogsRetentionInDays:
+    Description: Specifies the number of days you want to retain log events.
+    Type: Number
+    AllowedValues:
+    - 1
+    - 3
+    - 5
+    - 7
+    - 14
+    - 30
+    - 60
+    - 90
+    - 120
+    - 150
+    - 180
+    - 365
+    - 400
+    - 545
+    - 731
+    - 1827
+    - 3653
+    Default: 14
+  InstanceID:
+    Description: Base instance
+    Type: String
+    Default: ami-5f76b626
+  # Network configuration
+  EC2ELBFacing:
+    Description: Indicates whether the load balancer in front of the EC2 is Internet-facing or internal.
+    Type: String
+    AllowedValues:
+    - internet-facing
+    - internal
+    Default: internet-facing
+  NetworkAccessIP:
+    Description: Default access IP address
+    Type: String
+    Default: 62.14.46.178/32
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+Resources:
+  EC2IAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    DependsOn: IamRole
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: IamRole
+  IamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      RoleName:
+        Fn::Join:
+        - "-"
+        - - iam-role
+          - Ref: InstanceRole
+          - Ref: Project
+          - Ref: Environment
+  IamPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName:
+        Fn::Join:
+        - ''
+        - - base-instance-policy-
+          - Ref: AWS::StackName
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action:
+          - s3:*
+          - ec2:CreateTags
+          - ec2:Describe*
+          - elasticloadbalancing:Describe*
+          - autoscaling:Describe*
+          - cloudwatch:*
+          - logs:*
+          - sns:*
+          - ses:*
+          Resource: "*"
+      Roles:
+      - Ref: IamRole
+  Logs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Join:
+        - "-"
+        - - Ref: Project
+          - ec2-logs
+          - Ref: Environment
+      RetentionInDays:
+        Ref: LogsRetentionInDays
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SSH and HTTP Access to EC2 Instance
+      VpcId:
+        Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'VPC'
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - "sg"
+            - Ref: InstanceRole
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Fn::ImportValue:
+            Fn::Join:
+            - '-'
+            - - 'projectFOO-100-network'
+              - Ref: Environment
+              - 'VPCCIDRIP'
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Ref: NetworkAccessIP
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        SourceSecurityGroupId:
+          Ref: EC2ELBSG
+      SecurityGroupEgress:
+      - IpProtocol: "-1"
+        CidrIp: 0.0.0.0/0
+  EC2LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          default:
+          - init
+          - setup
+        init:
+          packages:
+            yum:
+              epel-release: []
+              nginx: []
+              git: []
+              htop: []
+              awscli: []
+              bzip2-devel: []
+              expect: []
+              zip: []
+              unzip: []
+              ansible: []
+        setup:
+          files:
+            # These files are needed for CloudFormation::Init to work
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.Server.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource EC2LaunchConfiguration
+                runas=root
+            /root/somebootstrapscript.sh:
+              content: !Sub |
+                #!/bin/bash
+                yum install -y --nogpgcheck nginx
+                systemctl start nginx
+              mode: '000777'
+              owner: root
+              group: root
+          commands:
+            a_exec_script:
+              command: "bash -c '/root/somebootstrapscript.sh'"
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+    Properties:
+      IamInstanceProfile:
+        Ref: EC2IAMInstanceProfile
+      ImageId:
+        Ref: InstanceID
+      InstanceType:
+        Ref: InstanceType
+      SecurityGroups:
+      - Ref: EC2SecurityGroup
+      KeyName:
+        Ref: Ec2KeyPair
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y epel-release
+          yum install -y awscli
+          /usr/bin/easy_install --script-dir /opt/aws/bin https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+          cp -v /usr/lib/python2*/site-packages/aws_cfn_bootstrap*/init/redhat/cfn-hup /etc/init.d
+          chmod +x /etc/init.d/cfn-hup
+          /opt/aws/bin/cfn-init --stack ${AWS::StackId} --resource EC2LaunchConfiguration --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2AutoScalingGroup --region ${AWS::Region}
+  EC2ELBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - Ref: Project
+            - "ec2-elb-sg"
+            - Ref: Environment
+      - Key: Owner
+        Value:
+          Ref: Owner
+      - Key: Project
+        Value:
+          Ref: Project
+      - Key: Environment
+        Value:
+          Ref: Environment
+      - Key: DeleteAfter
+        Value:
+          Ref: DeleteAfter
+      GroupDescription: EC2 ELB access
+      VpcId:
+        Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'VPC'
+      SecurityGroupIngress:
+      - CidrIp:
+          Ref: NetworkAccessIP
+        FromPort: 80
+        ToPort: 80
+        IpProtocol: tcp
+  EC2ElasticLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name:
+        Fn::Join:
+        - "-"
+        - - Ref: Project
+          - "ec2-elb"
+          - Ref: Environment
+      Scheme:
+        Ref: EC2ELBFacing
+      SecurityGroups:
+      - Ref: EC2ELBSG
+      Subnets:
+      - Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'PublicSubnet1'
+      - Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'PublicSubnet2'
+      - Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'PublicSubnet3'
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "-"
+          - - Ref: Project
+            - "ec2-elb"
+            - Ref: Environment
+      - Key: Owner
+        Value:
+          Ref: Owner
+      - Key: Project
+        Value:
+          Ref: Project
+      - Key: Environment
+        Value:
+          Ref: Environment
+      - Key: DeleteAfter
+        Value:
+          Ref: DeleteAfter
+  EC2ElasticLoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 15
+      HealthCheckPath: "/"
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: '200'
+      Port: 80
+      Protocol: HTTP
+      Tags:
+      - Key: Name
+        Value: EC2
+      VpcId:
+        Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'VPC'
+  EC2ElasticLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - TargetGroupArn:
+          Ref: EC2ElasticLoadBalancerTargetGroup
+        Type: forward
+      LoadBalancerArn:
+        Ref: EC2ElasticLoadBalancer
+      Port: 80
+      Protocol: HTTP
+  EC2AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName:
+        Ref: EC2LaunchConfiguration
+      MinSize: '1'
+      MaxSize: '1'
+      DesiredCapacity: '1'
+      HealthCheckGracePeriod: 900
+      HealthCheckType: EC2
+      VPCZoneIdentifier:
+      - Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'PrivateSubnet1'
+      - Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'PrivateSubnet2'
+      - Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'PrivateSubnet3'
+      TargetGroupARNs:
+      - Ref: EC2ElasticLoadBalancerTargetGroup
+      Tags:
+      - PropagateAtLaunch: true
+        Key: Name
+        Value:
+          Fn::Join:
+          - '.'
+          - - EC2
+            - Ref: Project
+            - Ref: Environment
+      - PropagateAtLaunch: true
+        Key: Role
+        Value: ec2
+      - PropagateAtLaunch: true
+        Key: project
+        Value:
+          Ref: Project
+      - PropagateAtLaunch: true
+        Key: owner
+        Value:
+          Ref: Owner
+      - PropagateAtLaunch: true
+        Key: environment
+        Value:
+          Ref: Environment
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT25M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        PauseTime: PT10M
+        WaitOnResourceSignals: false
+Outputs:
+  # Common information for all resources.
+  Owner:
+    Description: Responsible of the stack creation.
+    Value:
+      Ref: Owner
+  Project:
+    Description: Project name.
+    Value:
+      Ref: Project
+  Environment:
+    Description: Environment stage.
+    Value:
+      Ref: Environment
+  DeleteAfter:
+    Description: Date when the resource will automatically deleted.
+    Value:
+      Ref: DeleteAfter
+  # Instance configuration.
+  KeyPairLoaded:
+    Description: Key Pair used.
+    Value:
+      Ref: Ec2KeyPair
+  InstanceType:
+    Description: Instance Type.
+    Value:
+      Ref: InstanceType
+  IAMRole:
+    Description: IAM Instance Profile Role Created.
+    Value:
+      Ref: IamRole
+  # Network configuration.
+  EC2SecurityGroup:
+    Description: Private Instance Security Group to Allow Remote Access
+    Value:
+      Ref: EC2SecurityGroup
+  EC2ElasticLoadBalancer:
+    Description: Public DNS to EC2 instance
+    Value:
+      !GetAtt EC2ElasticLoadBalancer.DNSName

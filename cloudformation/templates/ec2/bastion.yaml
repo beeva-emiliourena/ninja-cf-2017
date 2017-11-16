@@ -1,0 +1,326 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 201 Bastion Host
+Parameters:
+  # Common information for all resources.
+  Owner:
+    Description: Enter team or individual name responsible for the stack.
+    Type: String
+    Default: FirstName LastName
+  Project:
+    Description: Enter project name.
+    Type: String
+    Default: Project
+  Environment:
+    Description: Select environment to run the stack
+    Type: String
+    Default: pilot
+    AllowedValues:
+    - pilot
+    - dev
+    - qa
+    - pre
+    - pro
+    ConstraintDescription: Must be one of pilot, dev, qa, pre, pro.
+  DeleteAfter:
+    Description: Enter Date (MM/DD/YYYY). It's Ok to delete the stack or 'Never' if
+      meant to be persistent.
+    Type: String
+    Default: Never
+  # Bastion configuration.
+  Ec2KeyPair:
+    Description: Select Keypair to Assign to EC2 Instances
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceType:
+    Description: Select Instance Type.
+    Type: String
+    Default: t2.small
+    AllowedValues:
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m1.xlarge
+    - m2.xlarge
+    - m2.2xlarge
+    - m2.4xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - c1.medium
+    - c1.xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - g2.2xlarge
+    - g2.8xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - d2.xlarge
+    - d2.2xlarge
+    - d2.4xlarge
+    - d2.8xlarge
+    - hi1.4xlarge
+    - hs1.8xlarge
+    - cr1.8xlarge
+    - cc2.8xlarge
+    - cg1.4xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+  InstanceID:
+    Description: Base instance
+    Type: String
+    Default: ami-5f76b626
+  # Network configuration
+  NetworkAccessIP:
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid CIDR range of the form x.x.x.x/x.
+Resources:
+  IamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      RoleName:
+        Fn::Join:
+        - "."
+        - - "bastion"
+          - Ref: Project
+          - Ref: Environment
+  IamPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName:
+        Fn::Join:
+        - ''
+        - - instance-policy-
+          - Ref: AWS::StackName
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action:
+          - s3:*
+          - ec2:Describe*
+          - ec2:CreateTags
+          - elasticloadbalancing:Describe*
+          - autoscaling:Describe*
+          - cloudwatch:*
+          - logs:*
+          - sns:*
+          Resource: "*"
+      Roles:
+      - Ref: IamRole
+  IamInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: IamRole
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SSH Access to Bastion Instance
+      VpcId:
+        Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'VPC'
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "."
+          - - "bastion"
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Ref: NetworkAccessIP
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Fn::ImportValue:
+            Fn::Join:
+            - '-'
+            - - 'projectFOO-100-network'
+              - Ref: Environment
+              - 'VPCCIDRIP'
+      - IpProtocol: icmp
+        FromPort: "-1"
+        ToPort: "-1"
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: "-1"
+        CidrIp: 0.0.0.0/0
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+    - BastionSecurityGroup
+    - IamInstanceProfile
+    Properties:
+      IamInstanceProfile:
+        Ref: IamInstanceProfile
+      ImageId:
+        Ref: InstanceID
+      InstanceInitiatedShutdownBehavior: stop
+      InstanceType:
+        Ref: InstanceType
+      KeyName:
+        Ref: Ec2KeyPair
+      Monitoring: 'true'
+      SecurityGroupIds:
+      - Ref: BastionSecurityGroup
+      - Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'RemoteAccessSecurityGroup'
+      SubnetId:
+        Fn::ImportValue:
+          Fn::Join:
+          - '-'
+          - - 'projectFOO-100-network'
+            - Ref: Environment
+            - 'PublicSubnet1'
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sda1"
+        Ebs:
+          DeleteOnTermination: 'true'
+          VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Join:
+          - "."
+          - - "bastion"
+            - Ref: Project
+            - Ref: Environment
+      - Key: owner
+        Value:
+          Ref: Owner
+      - Key: environment
+        Value:
+          Ref: Environment
+      - Key: project
+        Value:
+          Ref: Project
+      - Key: deleteAfter
+        Value:
+          Ref: DeleteAfter
+      - Key: Role
+        Value: bastion
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    DependsOn:
+    - EC2Instance
+    - EIP
+    Properties:
+      InstanceId:
+        Ref: EC2Instance
+      AllocationId:
+        Fn::GetAtt:
+        - EIP
+        - AllocationId
+Outputs:
+  # Common information for all resources.
+  Owner:
+    Description: Responsible of the stack creation.
+    Value:
+      Ref: Owner
+  Project:
+    Description: Project name.
+    Value:
+      Ref: Project
+  Environment:
+    Description: Environment stage.
+    Value:
+      Ref: Environment
+  DeleteAfter:
+    Description: Date when the resource will automatically deleted.
+    Value:
+      Ref: DeleteAfter
+  # Bastion configuration.
+  KeyPairLoaded:
+    Description: Key Pair used.
+    Value:
+      Ref: Ec2KeyPair
+  InstanceType:
+    Description: Instance Type.
+    Value:
+      Ref: InstanceType
+  IAMRole:
+    Description: IAM Instance Profile Role Created.
+    Value:
+      Ref: IamRole
+  # Network configuration.
+  PublicDns:
+    Description: Bastion Public DNS Name
+    Value:
+      Fn::GetAtt:
+      - EC2Instance
+      - PublicDnsName
+  EIP:
+    Description: Bastion External IP Address
+    Value:
+      Ref: EIP
+  BastionSecurityGroup:
+    Description: Bastion Security Group to Allow Remote Access
+    Value:
+      Ref: BastionSecurityGroup

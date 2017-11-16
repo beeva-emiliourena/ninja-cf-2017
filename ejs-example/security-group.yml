@@ -1,0 +1,45 @@
+BastionSecurityGroup:
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: SSH Access to Foo Instance
+    VpcId:
+      Ref: VPC
+    Tags:
+    - Key: Name
+      Value:
+        Fn::Join:
+        - "."
+        - - "bastion"
+          - Ref: Project
+          - Ref: Environment
+    - Key: owner
+      Value:
+        Ref: Owner
+    - Key: project
+      Value:
+        Ref: Project
+    - Key: sponsor
+      Value:
+        Ref: Sponsor
+    - Key: environment
+      Value:
+        Ref: Environment
+    - Key: deleteAfter
+      Value:
+        Ref: DeleteAfter
+    SecurityGroupIngress:
+<% for(var lol in ports) { -%>
+    - IpProtocol: tcp
+      FromPort: <%= ports[lol] %>
+      ToPort: <%= ports[lol] %>
+      CidrIp:
+        Ref: NetworkAccessIP 
+<% } -%>
+    - IpProtocol: icmp
+      FromPort: "-1"
+      ToPort: "-1"
+      CidrIp:
+        Ref: NetworkAccessIP
+    SecurityGroupEgress:
+    - IpProtocol: "-1"
+      CidrIp: 0.0.0.0/0

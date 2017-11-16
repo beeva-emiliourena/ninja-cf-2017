@@ -1,0 +1,304 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 200 EC2 stack
+Parameters:
+  # Common information for all resources.
+  Owner:
+    Description: Enter team or individual name responsible for the stack.
+    Type: String
+    Default: FirstName LastName
+  Project:
+    Description: Enter project name.
+    Type: String
+    Default: Project
+  Environment:
+    Description: Select environment to run the stack
+    Type: String
+    Default: pilot
+    AllowedValues:
+    - pilot
+    - dev
+    - qa
+    - pre
+    - pro
+    ConstraintDescription: Must be one of pilot, dev, qa, pre, pro.
+  DeleteAfter:
+    Description: Enter Date (MM/DD/YYYY). It's Ok to delete the stack or 'Never' if
+      meant to be persistent.
+    Type: String
+    Default: Never
+  # All instances configuration
+  Ec2KeyPair:
+    Description: Select Keypair to Assign to EC2 Instances
+    Type: AWS::EC2::KeyPair::KeyName
+  NetworkAccessIPs:
+    Description: Default access IP address
+    Type: CommaDelimitedList
+    Default: "62.14.46.178/32, 213.27.146.180/32, 0.0.0.0/0"
+  EC2InstanceType:
+    Description: Select Instance Type.
+    Type: String
+    Default: t2.small
+    AllowedValues:
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m1.xlarge
+    - m2.xlarge
+    - m2.2xlarge
+    - m2.4xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - c1.medium
+    - c1.xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - g2.2xlarge
+    - g2.8xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - d2.xlarge
+    - d2.2xlarge
+    - d2.4xlarge
+    - d2.8xlarge
+    - hi1.4xlarge
+    - hs1.8xlarge
+    - cr1.8xlarge
+    - cc2.8xlarge
+    - cg1.4xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+  BastionInstanceType:
+    Description: Select Instance Type.
+    Type: String
+    Default: t2.small
+    AllowedValues:
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m1.xlarge
+    - m2.xlarge
+    - m2.2xlarge
+    - m2.4xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - c1.medium
+    - c1.xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - g2.2xlarge
+    - g2.8xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - d2.xlarge
+    - d2.2xlarge
+    - d2.4xlarge
+    - d2.8xlarge
+    - hi1.4xlarge
+    - hs1.8xlarge
+    - cr1.8xlarge
+    - cc2.8xlarge
+    - cg1.4xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+  LogsRetentionInDays:
+    Description: Specifies the number of days you want to retain log events.
+    Type: Number
+    AllowedValues:
+    - 1
+    - 3
+    - 5
+    - 7
+    - 14
+    - 30
+    - 60
+    - 90
+    - 120
+    - 150
+    - 180
+    - 365
+    - 400
+    - 545
+    - 731
+    - 1827
+    - 3653
+    Default: 14
+  # EC2 configuration
+  SetupEC2Instance:
+    Description: Setup EC2 Instance(s)?
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+  SetupBastionInstance:
+    Description: Setup Bastion Instance(s)?
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+Conditions:
+  ConfigEC2Instance:
+    Fn::Equals:
+    - Ref: SetupEC2Instance
+    - 'true'
+  ConfigBastionInstance:
+    Fn::Equals:
+    - Ref: SetupBastionInstance
+    - 'true'
+Mappings:
+  EnvironmentParams:
+    common:
+      ConfigBucketName: projectfoo-infra
+    dev:
+      ConfigBucketName: projectfoo-infra-dev
+    pre:
+      ConfigBucketName: projectfoo-infra-pre
+    pro:
+      ConfigBucketName: projectfoo-infra-pro
+Resources:
+  EC2Instance:
+    Condition: ConfigEC2Instance
+    DependsOn: BastionInstance
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+        - ''
+        - - https://s3.amazonaws.com/
+          - Fn::FindInMap:
+            - EnvironmentParams
+            - Ref: Environment
+            - ConfigBucketName
+          - "/cloudformation/templates/ec2/ec2.yaml"
+      TimeoutInMinutes: '15'
+      Parameters:
+        Owner:
+          Ref: Owner
+        Project:
+          Ref: Project
+        Environment:
+          Ref: Environment
+        DeleteAfter:
+          Ref: DeleteAfter
+        InstanceRole: 'EC2'
+        Ec2KeyPair:
+          Ref: Ec2KeyPair
+        InstanceType:
+          Ref: EC2InstanceType
+        NetworkAccessIP: !Select [ 0, !Ref NetworkAccessIPs ]
+  BastionInstance:
+    Condition: ConfigBastionInstance
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+        - ''
+        - - https://s3.amazonaws.com/
+          - Fn::FindInMap:
+            - EnvironmentParams
+            - Ref: Environment
+            - ConfigBucketName
+          - "/cloudformation/templates/ec2/bastion.yaml"
+      TimeoutInMinutes: '15'
+      Parameters:
+        Owner:
+          Ref: Owner
+        Project:
+          Ref: Project
+        Environment:
+          Ref: Environment
+        DeleteAfter:
+          Ref: DeleteAfter
+        Ec2KeyPair:
+          Ref: Ec2KeyPair
+        InstanceType:
+          Ref: BastionInstanceType
+        NetworkAccessIP: !Select [ 1, !Ref NetworkAccessIPs ]
+Outputs:
+  # Common information for all resources.
+  Owner:
+    Description: Responsible of the stack creation.
+    Value:
+      Ref: Owner
+  Project:
+    Description: Project name.
+    Value:
+      Ref: Project
+  Environment:
+    Description: Environment stage.
+    Value:
+      Ref: Environment
+  DeleteAfter:
+    Description: Date when the resource will automatically deleted.
+    Value:
+      Ref: DeleteAfter
+  EC2SecurityGroup:
+    Description: Private Instance Security Group to Allow Remote Access
+    Value:
+      Fn::GetAtt:
+      - EC2Instance
+      - Outputs.EC2SecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-EC2SecurityGroup"
+  EC2ELBDNS:
+    Description: Public DNS to EC2 instance
+    Value:
+      Fn::GetAtt:
+      - EC2Instance
+      - Outputs.EC2ElasticLoadBalancer
+    Export:
+      Name: !Sub "${AWS::StackName}-EC2ELBDNS"

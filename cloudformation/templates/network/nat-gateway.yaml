@@ -1,0 +1,91 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 102 NAT Gateway
+Parameters:
+  # Common information for all resources.
+  Owner:
+    Description: Enter team or individual name responsible for the stack.
+    Type: String
+    Default: FirstName LastName
+  Project:
+    Description: Enter project name.
+    Type: String
+    Default: Project
+  Environment:
+    Description: Select environment to run the stack
+    Type: String
+    Default: pilot
+    AllowedValues:
+    - pilot
+    - dev
+    - qa
+    - pre
+    - pro
+    ConstraintDescription: Must be one of pilot, dev, qa, pre, pro.
+  DeleteAfter:
+    Description: Enter Date (MM/DD/YYYY). It's Ok to delete the stack or 'Never' if
+      meant to be persistent.
+    Type: String
+    Default: Never
+  # Nat configuration.
+  VPC:
+    Description: Select VPC.
+    Type: AWS::EC2::VPC::Id
+  PublicSubnet:
+    Description: Public Subnet to Attach NAT Gateway.
+    Type: AWS::EC2::Subnet::Id
+  PrivateRouteTable:
+    Description: Enter Private Route Table ID.
+    Type: String
+    Default: rtb-0000000
+Resources:
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    DependsOn: NatEIP
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - NatEIP
+        - AllocationId
+      SubnetId:
+        Ref: PublicSubnet
+  NatEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  NatRoute:
+    Type: AWS::EC2::Route
+    DependsOn: NatGateway
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NatGateway
+Outputs:
+  # Common information for all resources.
+  Owner:
+    Description: Responsible of the stack creation.
+    Value:
+      Ref: Owner
+  Project:
+    Description: Project name.
+    Value:
+      Ref: Project
+  Environment:
+    Description: Environment stage.
+    Value:
+      Ref: Environment
+  DeleteAfter:
+    Description: Date when the resource will automatically deleted.
+    Value:
+      Ref: DeleteAfter
+  # Nat gateway configuration.
+  VPC:
+    Description: VPC Used
+    Value:
+      Ref: VPC
+  NatEIP:
+    Description: NAT Elastic IP Address
+    Value:
+      Ref: NatEIP
