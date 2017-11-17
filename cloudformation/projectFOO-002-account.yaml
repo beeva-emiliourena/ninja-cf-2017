@@ -1,0 +1,186 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 002 Accounting wrong
+Parameters:
+  # Common information for all resources.
+  Owner:
+    Description: Enter Team or Individual Name Responsible for the Stack.
+    Type: String
+    Default: FirstName LastName
+  Project:
+    Description: Enter Project Name.
+    Type: String
+    Default: Infrastructure Stack Creation
+  Role:
+    Description: Role Name
+    Type: String
+    Default: infra
+  Environment:
+    Description: Select Environment to run the stack
+    Type: String
+    Default: dev
+    AllowedValues:
+    - pilot
+    - dev
+    - pre
+    - pro
+    ConstraintDescription: Must be one of dev, pre, pro.
+  Version:
+    Description: Project Version
+    Type: String
+    Default: 1.0.0
+  DeleteAfter:
+    Description: Enter Date (MM/DD/YYYY). It's Ok to Delete the Stack or 'Never' if
+      meant to be persistent.
+    Type: String
+    Default: 00/00/201x
+  # S3 Configuration
+  SetupLoggingBucket:
+    Description: Create a bucket for storing logs?
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+  LoggingBucketName:
+    Description: The bucket name.
+    Type: String
+    Default: deploy
+Conditions:
+  IsDev:
+    Fn::Equals:
+    - Ref: Environment
+    - dev
+  IsProd:
+    Fn::Equals:
+    - Ref: Environment
+    - pro
+  ConfigLoggingBucket:
+    Fn::Equals:
+    - Ref: SetupLoggingBucket
+    - 'true'
+Mappings:
+  EnvironmentParams:
+    common:
+      ConfigBucketName: projectfoo-infra
+    dev:
+      ConfigBucketName: projectfoo-infra-dev
+    pre:
+      ConfigBucketName: projectfoo-infra-pre
+    pro:
+      ConfigBucketName: projectfoo-infra-pro
+Resources:
+  User:
+    Type: AWS::IAM::User
+    Properties:
+      UserName:
+        Fn::Join:
+          - '-'
+          - - Ref: Project
+            - "user"
+            - Ref: Environment
+  UserPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: User
+    Properties:
+      PolicyName:
+        Fn::Join:
+        - '-'
+        - - Ref: AWS::StackName
+          - Ref: Project
+          - Ref: Environment
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action:
+          - iam:AddRoleToInstanceProfile
+          - iam:AttachGroupPolicy
+          - iam:AttachRolePolicy
+          - iam:CreateInstanceProfile
+          - iam:CreatePolicy
+          - iam:CreateRole
+          - iam:GetInstanceProfile
+          - iam:GetPolicy
+          - iam:GetPolicyVersion
+          - iam:GetRole
+          - iam:GetRolePolicy
+          - iam:PassRole
+          - iam:Put*
+          - iam:List*
+          - cloudformation:*
+          - cloudwatch:*
+          - logs:*
+          - ec2:*
+          - s3:*
+          - elasticloadbalancing:*
+          - autoscaling:*
+          Resource: "*"
+      Users: [
+        Ref: User
+      ]
+  UserKey:
+    Type: AWS::IAM::AccessKey
+    DependsOn: User
+    Properties:
+      UserName:
+        Ref: User
+  LoggingBucket:
+    Condition: ConfigLoggingBucket
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL:
+        Fn::Join:
+        - ''
+        - - https://s3.amazonaws.com/
+          - Fn::FindInMap:
+            - EnvironmentParams
+            - Ref: Environment
+            - ConfigBucketName
+          - "/cloudformation/templates/storage/s3-logging-bucket.yaml"
+      TimeoutInMinutes: '15'
+      Parameters:
+        Owner:
+          Ref: Owner
+        Project:
+          Ref: Project
+        Role: logging-bucket
+        Environment:
+          Ref: Environment
+        DeleteAfter:
+          Ref: DeleteAfter
+        BucketName:
+          Ref: LoggingBucketName
+Outputs:
+  Owner:
+    Description: Team or Individual that Owns this Formation.
+    Value:
+      Ref: Owner
+  Project:
+    Description: The project name
+    Value:
+      Ref: Project
+  Environment:
+    Description: Environment
+    Value:
+      Ref: Environment
+  DeleteAfter:
+    Description: It is ok to delete this Formation after this date
+    Value:
+      Ref: DeleteAfter
+  BucketName:
+    Description: Name of S3 logging bucket
+    Value:
+      Fn::GetAtt:
+      - LoggingBucket
+      - Outputs.BucketName
+    Export:
+      Name: !Sub "${AWS::StackName}-LoggingBucketName"
+  UserKey:
+    Description: Is not nice to put keys here
+    Value:
+      Ref: UserKey
+  SecretKey:
+    Description: Is very wrong to put secrets here
+    Value: !GetAtt UserKey.SecretAccessKey
+
+

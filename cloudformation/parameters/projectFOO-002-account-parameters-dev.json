@@ -1,0 +1,35 @@
+[
+  {
+    "ParameterKey": "Owner",
+    "ParameterValue": "BEEVA"
+  },
+  {
+    "ParameterKey": "Project",
+    "ParameterValue": "projectfoo"
+  },
+  {
+    "ParameterKey": "Role",
+    "ParameterValue": "account-config"
+  },
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "Version",
+    "ParameterValue": "development"
+  },
+  {
+    "ParameterKey": "DeleteAfter",
+    "ParameterValue": "Never"
+  },
+  {
+    "ParameterKey": "SetupLoggingBucket",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LoggingBucketName",
+    "ParameterValue": "logging"
+  }
+]
+
